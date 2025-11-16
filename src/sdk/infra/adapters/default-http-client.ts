@@ -78,7 +78,7 @@ export class DefaultHttpClient extends BaseHttpClient {
 
     if (statusCode >= 500) {
       return new WaldeSystemError(
-        serverMessage || 'A server error occurred. Please try again later.',
+        serverMessage || `Server error ${statusCode}: ${statusMessage}`,
         undefined, // No meaningful cause for server errors
         details
       );
