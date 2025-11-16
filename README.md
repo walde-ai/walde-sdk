@@ -5,7 +5,7 @@ performant online content.
 
 ## Installation
 ```bash
-npm install @walde.ai/walde-sdk
+npm i @walde.ai/walde-sdk
 ```
 
 ## Quick Start
@@ -28,19 +28,41 @@ const walde = MakeWalde({
 Once you have your instance defined, you can chain methods to fetch the content you want.
 ```ts
 // Get one content
-const byKey = await walde.contents().key('my/content/key').locale('en-us').resolve();
-const byId = await walde.contents().id('my-content-id').locale('en-us').resolve();
-const byName = await walde.contents().name('My Content Name').locale('en-us').resolve();
+const byKey = await walde
+  .contents()
+  .key('my/content/key')
+  .locale('en-us')
+  .resolve();
+```
+Other ways to get content.
+```ts
+const byId = await walde
+  .contents()
+  .id('my-content-id')
+  .locale('en-us')
+  .resolve();
+
+const byName = await walde
+  .contents()
+  .name('My Content Name')
+  .locale('en-us')
+  .resolve();
 
 // List all content in the site
-const all = await walde.contents().list().resolve();
+const all = await walde
+  .contents()
+  .list()
+  .resolve();
 ```
 
 Note that you can chain all the methods you want inexpensively. The asynchronous backend calls
 happens only when you run the `resolve()` method.
 ```ts
 // This is not loading anything yet
-const query = walde.contents().key('my/content/key').locale('en-us');
+const query = walde
+  .contents()
+  .key('my/content/key')
+  .locale('en-us');
 
 // This actually performs the backend call
 const result = await query.resolve();

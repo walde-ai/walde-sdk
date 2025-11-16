@@ -1,6 +1,6 @@
 {
-  "name": "walde-sdk",
-  "version": "0.1.0",
+  "name": "@walde.ai/walde-sdk",
+  "version": "0.1.2",
   "description": "TypeScript SDK for Walde platform",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -8,7 +8,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && tsc-alias",
     "dev": "tsc --watch",
     "clean": "rm -rf dist"
   },
@@ -18,16 +18,16 @@
     "typescript"
   ],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "tsc-alias": "^1.8.16",
+    "typescript": "^5.0.0"
   },
   "dependencies": {
-    "amazon-cognito-identity-js": "^6.3.12",
-    "aws-sdk": "^2.1691.0",
-    "@aws-sdk/client-s3": "^3.0.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.0.0",
+    "@aws-sdk/client-s3": "^3.0.0",
+    "amazon-cognito-identity-js": "^6.3.12",
     "gray-matter": "^4.0.3"
   }
 }
