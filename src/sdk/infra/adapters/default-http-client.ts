@@ -1,8 +1,5 @@
-import * as https from 'https';
-import * as http from 'http';
-import { URL } from 'url';
 import { TokenProvider } from '../../domain/ports/in/token-provider';
-import { WaldeNetworkError, WaldeSystemError, WaldeAuthenticationError, WaldeValidationError } from '@/sdk/domain/errors';
+import { WaldeNetworkError, WaldeSystemError, WaldeAuthenticationError, WaldeValidationError, WaldeUnexpectedError } from '@/sdk/domain/errors';
 import { BaseHttpClient } from './base-http-client';
 
 /**
@@ -20,8 +17,6 @@ export class DefaultHttpClient extends BaseHttpClient {
    * Get headers with Bearer token authentication
    */
   protected getHeaders(): Record<string, string> {
-    // This will be called synchronously, but we need async token access
-    // Keep the existing implementation for backward compatibility
     return {
       'Content-Type': 'application/json',
     };
@@ -79,7 +74,7 @@ export class DefaultHttpClient extends BaseHttpClient {
     if (statusCode >= 500) {
       return new WaldeSystemError(
         serverMessage || `Server error ${statusCode}: ${statusMessage}`,
-        undefined, // No meaningful cause for server errors
+        undefined,
         details
       );
     }
@@ -99,72 +94,42 @@ export class DefaultHttpClient extends BaseHttpClient {
    */
   private async request(method: string, path: string, body?: any, customHeaders?: Record<string, string>): Promise<any> {
     const accessToken = await this.tokenProvider.getAccessToken();
-    const url = new URL(`${this.baseUrl}${path}`);
+    const url = `${this.baseUrl}${path}`;
 
-    const requestBody = body && (method === 'POST' || method === 'PUT')
-      ? JSON.stringify(body)
-      : undefined;
-
-    const options = {
-      hostname: url.hostname,
-      port: url.port || (url.protocol === 'https:' ? 443 : 80),
-      path: url.pathname + url.search,
-      method,
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        ...(requestBody && { 'Content-Length': Buffer.byteLength(requestBody) }),
-        ...(customHeaders || {})
-      }
+    const headers = {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      ...(customHeaders || {})
     };
 
-    return new Promise((resolve, reject) => {
-      const client = url.protocol === 'https:' ? https : http;
-
-      const req = client.request(options, (res) => {
-        let data = '';
-
-        res.on('data', (chunk) => {
-          data += chunk;
-        });
-
-        res.on('end', () => {
-          try {
-            const contentType = res.headers['content-type'];
-            let parsedData;
-
-            if (contentType && contentType.includes('application/json')) {
-              parsedData = data ? JSON.parse(data) : null;
-            } else {
-              parsedData = data;
-            }
-
-            if (!res.statusCode) {
-              reject(new WaldeNetworkError('No status code received from server', new Error('Missing status code')));
-              return;
-            }
-
-            if (res.statusCode >= 400) {
-              reject(this.handleHttpError(res.statusCode, res.statusMessage || '', parsedData, url.toString()));
-              return;
-            }
-
-            resolve(parsedData);
-          } catch (parseError) {
-            reject(new WaldeNetworkError('Failed to parse response', parseError as Error));
-          }
-        });
+    try {
+      const response = await fetch(url, {
+        method,
+        headers,
+        body: body && (method === 'POST' || method === 'PUT') ? JSON.stringify(body) : undefined,
       });
 
-      req.on('error', (error) => {
-        reject(error);
-      });
+      const contentType = response.headers.get('content-type');
+      let parsedData;
 
-      if (requestBody) {
-        req.write(requestBody);
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.text();
+        parsedData = data ? JSON.parse(data) : null;
+      } else {
+        parsedData = await response.text();
       }
 
-      req.end();
-    });
+      if (!response.ok) {
+        throw this.handleHttpError(response.status, response.statusText, parsedData, url);
+      }
+
+      return parsedData;
+    } catch (error) {
+      if (error instanceof WaldeNetworkError || error instanceof WaldeAuthenticationError || 
+          error instanceof WaldeSystemError || error instanceof WaldeValidationError) {
+        throw error;
+      }
+      throw new WaldeUnexpectedError('HTTP request failed', error as Error);
+    }
   }
 }

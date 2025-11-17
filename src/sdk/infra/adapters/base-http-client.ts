@@ -124,4 +124,39 @@ export abstract class BaseHttpClient {
       throw new WaldeUnexpectedError('HTTP request failed', error as Error);
     }
   }
+
+  /**
+   * Make HTTP DELETE request with error handling and response parsing.
+   */
+  async delete<T>(endpoint: string): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
+    const headers = this.getHeaders();
+
+    try {
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new WaldeNetworkError(
+          `HTTP ${response.status}: ${response.statusText} for ${url}`,
+          new Error(`HTTP ${response.status}`)
+        );
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.text();
+        return data ? JSON.parse(data) : (null as T);
+      } else {
+        return (await response.text()) as T;
+      }
+    } catch (error) {
+      if (error instanceof WaldeNetworkError) {
+        throw error;
+      }
+      throw new WaldeUnexpectedError('HTTP request failed', error as Error);
+    }
+  }
 }

@@ -1,34 +1,64 @@
 import { BackendClient } from '@/sdk/domain/ports/backend/backend-client';
-import { DefaultHttpClient } from '@/sdk/infra/adapters/default-http-client';
+import { BaseHttpClient } from '@/sdk/infra/adapters/base-http-client';
 
-export class WaldeClient implements BackendClient {
+export class WaldeClient extends BaseHttpClient implements BackendClient {
   constructor(
-    private httpClient: DefaultHttpClient,
+    baseUrl: string,
     private getAuthToken: () => Promise<string>
-  ) {}
+  ) {
+    super(baseUrl);
+  }
+
+  protected getHeaders(): Record<string, string> {
+    return {
+      'Content-Type': 'application/json',
+    };
+  }
 
   async get<T>(endpoint: string, headers?: Record<string, string>): Promise<T> {
     const authHeaders = await this.getAuthHeaders();
-    return this.httpClient.get(endpoint, { ...authHeaders, ...headers });
+    return this.makeAuthenticatedRequest('GET', endpoint, undefined, { ...authHeaders, ...headers });
   }
 
   async post<T>(endpoint: string, data?: any, headers?: Record<string, string>): Promise<T> {
     const authHeaders = await this.getAuthHeaders();
-    return this.httpClient.post(endpoint, data, { ...authHeaders, ...headers });
+    return this.makeAuthenticatedRequest('POST', endpoint, data, { ...authHeaders, ...headers });
   }
 
   async put<T>(endpoint: string, data?: any, headers?: Record<string, string>): Promise<T> {
     const authHeaders = await this.getAuthHeaders();
-    return this.httpClient.put(endpoint, data, { ...authHeaders, ...headers });
+    return this.makeAuthenticatedRequest('PUT', endpoint, data, { ...authHeaders, ...headers });
   }
 
   async delete<T>(endpoint: string, headers?: Record<string, string>): Promise<T> {
     const authHeaders = await this.getAuthHeaders();
-    return this.httpClient.delete(endpoint, { ...authHeaders, ...headers });
+    return this.makeAuthenticatedRequest('DELETE', endpoint, undefined, { ...authHeaders, ...headers });
   }
 
   private async getAuthHeaders(): Promise<Record<string, string>> {
     const token = await this.getAuthToken();
     return { Authorization: `Bearer ${token}` };
+  }
+
+  private async makeAuthenticatedRequest<T>(method: string, endpoint: string, data?: any, headers?: Record<string, string>): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
+    
+    const response = await fetch(url, {
+      method,
+      headers: { ...this.getHeaders(), ...headers },
+      body: data && (method === 'POST' || method === 'PUT') ? JSON.stringify(data) : undefined,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const text = await response.text();
+      return text ? JSON.parse(text) : (null as T);
+    } else {
+      return (await response.text()) as T;
+    }
   }
 }

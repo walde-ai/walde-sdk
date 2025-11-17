@@ -2,7 +2,7 @@ import { WaldeAdminFactory } from './infra/factories/walde-admin-factory';
 import { WaldeAdmin } from './infra/futures/walde-admin-future';
 import { CredentialsProvider } from './domain/ports/out/credentials-provider';
 
-interface MakeWaldeAdminConfig {
+export interface WaldeAdminConfig {
   credentialsProvider: CredentialsProvider;
   endpoint?: string;
   clientId?: string;
@@ -13,6 +13,6 @@ interface MakeWaldeAdminConfig {
 /**
  * Customer-facing factory function for creating WaldeAdmin instances
  */
-export function MakeWaldeAdmin(config: MakeWaldeAdminConfig): WaldeAdmin {
+export function MakeWaldeAdmin(config: WaldeAdminConfig): WaldeAdmin {
   return WaldeAdminFactory.createAdmin(config);
 }
