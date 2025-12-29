@@ -30,7 +30,7 @@ export type { CertificateAssociationsResult } from './domain/ports/out/site-repo
 
 // Infrastructure
 export { FileWorkspaceConfigRepo } from './infra/adapters/repositories/file-workspace-config-repo';
-export { DefaultHttpClient } from './infra/adapters/default-http-client';
+export { AdminHttpClient } from './infra/adapters/admin-http-client';
 export { DefaultTokenProvider } from './infra/adapters/default-token-provider';
 export { ApiClient } from './infra/adapters/api-client';
 

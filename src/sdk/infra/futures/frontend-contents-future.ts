@@ -1,71 +1,45 @@
-import { Future } from '@/std/domain/entities/future';
-import { Result, ok } from '@/std/domain/entities/result';
-import { Manifest } from '@/sdk/domain/entities/manifest';
 import { FrontendHttpClient } from '@/sdk/infra/adapters/frontend-http-client';
 import { FrontendContentDtoMapper } from '@/sdk/infra/mappers/dto/frontend-content-dto-mapper';
-import { ContentListFuture } from './content-list-future';
+import { ManifestFuture } from './manifest-future';
 import { ContentItemFuture } from './content-item-future';
-import { WaldeValidationError } from '@/sdk/domain/errors';
+import { ContentListFuture } from './content-list-future';
+import { ContentByKeyFuture } from './content-by-key-future';
 
 /**
- * Future for frontend content operations with manifest-based validation
+ * Future for frontend content operations that fetches manifest when needed
  */
-export class FrontendContentsFuture extends Future<FrontendContentsFuture, never> {
+export class FrontendContentsFuture {
   constructor(
-    private readonly manifest: Manifest,
+    private readonly manifestFuture: ManifestFuture,
     private readonly httpClient: FrontendHttpClient,
     private readonly contentMapper: FrontendContentDtoMapper
-  ) {
-    super({ parent: undefined as never });
-  }
-
-  /**
-   * Resolve returns self for method chaining
-   */
-  async resolve(): Promise<Result<FrontendContentsFuture, any>> {
-    return ok(this);
-  }
+  ) {}
 
   /**
    * Get list of contents from manifest
    */
   list(): ContentListFuture {
-    return new ContentListFuture(this.manifest);
+    return new ContentListFuture(this.manifestFuture);
   }
 
   /**
-   * Get content by ID with validation against manifest
+   * Get content by ID - fetches directly without manifest validation
    */
   id(id: string): ContentItemFuture {
-    const contentMetadata = this.manifest.contents.find(content => content.id === id);
-    if (!contentMetadata) {
-      throw new WaldeValidationError(`Content with ID '${id}' not found in manifest`);
-    }
-
-    return new ContentItemFuture(contentMetadata, this.httpClient, this.contentMapper);
+    return new ContentItemFuture(id, this.httpClient, this.contentMapper);
   }
 
   /**
-   * Get content by name with validation against manifest
+   * Get content by name - resolves name to ID via manifest first
    */
-  name(name: string): ContentItemFuture {
-    const contentMetadata = this.manifest.contents.find(content => content.name === name);
-    if (!contentMetadata) {
-      throw new WaldeValidationError(`Content with name '${name}' not found in manifest`);
-    }
-
-    return new ContentItemFuture(contentMetadata, this.httpClient, this.contentMapper);
+  name(name: string): ContentByKeyFuture {
+    return new ContentByKeyFuture(name, 'name', this.manifestFuture, this.httpClient, this.contentMapper);
   }
 
   /**
-   * Get content by key with validation against manifest
+   * Get content by key - resolves key to ID via manifest first
    */
-  key(key: string): ContentItemFuture {
-    const contentMetadata = this.manifest.contents.find(content => content.key === key);
-    if (!contentMetadata) {
-      throw new WaldeValidationError(`Content with key '${key}' not found in manifest`);
-    }
-
-    return new ContentItemFuture(contentMetadata, this.httpClient, this.contentMapper);
+  key(key: string): ContentByKeyFuture {
+    return new ContentByKeyFuture(key, 'key', this.manifestFuture, this.httpClient, this.contentMapper);
   }
 }

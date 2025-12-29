@@ -12,7 +12,7 @@ import { FileWorkspaceConfigRepo } from '@/sdk/infra/adapters/repositories/file-
 import { WriterApiAwsUiUploadCredentialsRepo } from '@/sdk/infra/adapters/repositories/writer-api-aws-ui-upload-credentials-repo';
 import { DefaultS3FilesRepoFactory } from './s3-files-repo-factory';
 import { ApiClient } from '@/sdk/infra/adapters/api-client';
-import { DefaultHttpClient } from '@/sdk/infra/adapters/default-http-client';
+import { AdminHttpClient } from '@/sdk/infra/adapters/admin-http-client';
 import { DefaultTokenProvider } from '@/sdk/infra/adapters/default-token-provider';
 import { WaldeAdminConfigFactory } from './walde-admin-config-factory';
 
@@ -36,7 +36,7 @@ export class WaldeAdminFactory {
     }, config.stage);
 
     const tokenProvider = new DefaultTokenProvider(config.credentialsProvider);
-    const httpClient = new DefaultHttpClient(completeConfig.endpoint, tokenProvider);
+    const httpClient = new AdminHttpClient(completeConfig.endpoint, tokenProvider);
     const apiClient = new ApiClient(httpClient);
     const sitesRepo: SiteRepository = new HttpSiteRepository(apiClient);
     const contentRepo: ContentRepo = new HttpContentRepo(apiClient);

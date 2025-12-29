@@ -7,34 +7,6 @@ import { ManifestFuture } from './manifest-future';
 import { FrontendContentsFuture } from './frontend-contents-future';
 
 /**
- * Future for content operations that resolves manifest first
- */
-class ContentsFutureWrapper extends Future<FrontendContentsFuture, never> {
-  constructor(
-    private readonly manifestFuture: ManifestFuture,
-    private readonly httpClient: FrontendHttpClient,
-    private readonly contentMapper: FrontendContentDtoMapper
-  ) {
-    super({ parent: undefined as never });
-  }
-
-  async resolve(): Promise<Result<FrontendContentsFuture, any>> {
-    try {
-      const manifestResult = await this.manifestFuture.resolve();
-      if (manifestResult.isErr()) {
-        return err(manifestResult.unwrapErr());
-      }
-      
-      const manifest = manifestResult.unwrap();
-      const contentsFuture = new FrontendContentsFuture(manifest, this.httpClient, this.contentMapper);
-      return ok(contentsFuture);
-    } catch (error) {
-      return err(error);
-    }
-  }
-}
-
-/**
  * Main Walde future class for frontend SDK operations
  */
 export class WaldeFuture extends Future<WaldeFuture, never> {
@@ -54,17 +26,17 @@ export class WaldeFuture extends Future<WaldeFuture, never> {
   }
 
   /**
-   * Get manifest operations
+   * Get manifest - resolves to actual manifest data
    */
   manifest(): ManifestFuture {
     return new ManifestFuture(this.httpClient, this.manifestMapper);
   }
 
   /**
-   * Get content operations (requires manifest for validation)
+   * Get content operations that require manifest
    */
-  contents(): ContentsFutureWrapper {
+  contents(): FrontendContentsFuture {
     const manifestFuture = this.manifest();
-    return new ContentsFutureWrapper(manifestFuture, this.httpClient, this.contentMapper);
+    return new FrontendContentsFuture(manifestFuture, this.httpClient, this.contentMapper);
   }
 }

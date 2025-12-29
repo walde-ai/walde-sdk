@@ -1,4 +1,4 @@
-import { DefaultHttpClient } from './default-http-client';
+import { AdminHttpClient } from './admin-http-client';
 import { BackendCommunication } from '@/sdk/domain/ports/out/backend-communication';
 
 /**
@@ -15,7 +15,7 @@ interface ApiResponse<T> {
  */
 export class ApiClient implements BackendCommunication {
   constructor(
-    private readonly httpClient: DefaultHttpClient
+    private readonly httpClient: AdminHttpClient
   ) {}
 
   /**
