@@ -1,6 +1,7 @@
 import { WaldeAdminFactory } from './infra/factories/walde-admin-factory';
 import { WaldeAdmin } from './infra/futures/walde-admin-future';
 import { CredentialsProvider } from './domain/ports/out/credentials-provider';
+import { S3ClientFactory } from './domain/ports/out/s3-client-factory';
 
 export interface WaldeAdminConfig {
   credentialsProvider: CredentialsProvider;
@@ -8,6 +9,7 @@ export interface WaldeAdminConfig {
   clientId?: string;
   region?: string;
   stage?: string;
+  s3ClientFactory?: S3ClientFactory;
 }
 
 /**

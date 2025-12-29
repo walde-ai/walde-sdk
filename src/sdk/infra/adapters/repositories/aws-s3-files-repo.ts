@@ -1,5 +1,6 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { RemoteFilesRepo } from '@/sdk/domain/ports/out/remote-files-repo';
+import { S3ClientFactory } from '@/sdk/domain/ports/out/s3-client-factory';
 import { File } from '@/sdk/domain/entities/file';
 import { UiUploadCredentials } from '@/sdk/domain/entities/ui-upload-credentials';
 import { WaldeLocalError } from '@/sdk/domain/errors';
@@ -8,7 +9,7 @@ import { WaldeLocalError } from '@/sdk/domain/errors';
  * AWS S3 implementation for uploading UI files
  */
 export class AwsS3FilesRepo implements RemoteFilesRepo {
-  constructor() {}
+  constructor(private readonly s3ClientFactory: S3ClientFactory) {}
 
   /**
    * Upload files to AWS S3 using temporary credentials
@@ -24,15 +25,8 @@ export class AwsS3FilesRepo implements RemoteFilesRepo {
    * Upload a single file to AWS S3 using temporary credentials
    */
   public async uploadFile(file: File, credentials: UiUploadCredentials): Promise<void> {
-    // Create S3 client with temporary AWS credentials and region from credentials
-    const s3Client = new S3Client({
-      region: credentials.region,
-      credentials: {
-        accessKeyId: credentials.accessKey,
-        secretAccessKey: credentials.secretKey,
-        sessionToken: credentials.sessionToken
-      }
-    });
+    // Create S3 client using factory with runtime credentials
+    const s3Client = this.s3ClientFactory.createS3Client(credentials);
 
     const command = new PutObjectCommand({
       Bucket: credentials.bucketName,

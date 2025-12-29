@@ -1,4 +1,5 @@
 import { Result, ok, err } from '@/std';
+import { S3ClientFactory } from '@/sdk/domain/ports/out/s3-client-factory';
 
 /**
  * Partial configuration data for Walde SDK (all optional)
@@ -8,6 +9,7 @@ export interface PartialWaldeAdminConfigData {
   clientId?: string;
   region?: string;
   userPoolId?: string;
+  s3ClientFactory?: S3ClientFactory;
 }
 
 /**
@@ -18,6 +20,7 @@ export interface WaldeAdminConfigData {
   clientId: string;
   region: string;
   userPoolId: string;
+  s3ClientFactory: S3ClientFactory;
 }
 
 /**
@@ -49,6 +52,10 @@ export abstract class WaldeAdminConfig {
     return this.data.userPoolId;
   }
 
+  get s3ClientFactory(): S3ClientFactory | undefined {
+    return this.data.s3ClientFactory;
+  }
+
   /**
    * Merge with another config, current values override merged ones when set
    */
@@ -58,7 +65,8 @@ export abstract class WaldeAdminConfig {
       endpoint: this.data.endpoint ?? otherData.endpoint,
       clientId: this.data.clientId ?? otherData.clientId,
       region: this.data.region ?? otherData.region,
-      userPoolId: this.data.userPoolId ?? otherData.userPoolId
+      userPoolId: this.data.userPoolId ?? otherData.userPoolId,
+      s3ClientFactory: this.data.s3ClientFactory ?? otherData.s3ClientFactory
     };
     
     // Create new instance of same type with merged data
@@ -97,7 +105,8 @@ export abstract class WaldeAdminConfig {
       endpoint: this.data.endpoint!,
       clientId: this.data.clientId!,
       region: this.data.region!,
-      userPoolId: this.data.userPoolId!
+      userPoolId: this.data.userPoolId!,
+      s3ClientFactory: this.data.s3ClientFactory!
     });
   }
 }

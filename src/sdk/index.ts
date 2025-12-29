@@ -27,12 +27,19 @@ export type { CredentialsProvider } from './domain/ports/out/credentials-provide
 export type { TokenProvider } from './domain/ports/in/token-provider';
 export type { WorkspaceConfigRepo } from './domain/ports/out/workspace-config-repo';
 export type { CertificateAssociationsResult } from './domain/ports/out/site-repository';
+export type { S3ClientFactory } from './domain/ports/out/s3-client-factory';
 
 // Infrastructure
 export { FileWorkspaceConfigRepo } from './infra/adapters/repositories/file-workspace-config-repo';
 export { AdminHttpClient } from './infra/adapters/admin-http-client';
 export { DefaultTokenProvider } from './infra/adapters/default-token-provider';
 export { ApiClient } from './infra/adapters/api-client';
+export { AwsS3ClientFactory } from './infra/adapters/aws-s3-client-factory';
+
+// Development/Testing
+export { S3MockClient } from './dev/s3-mock-client';
+export { S3MockClientFactory } from './dev/s3-mock-client-factory';
+export { MockCredentialsProvider } from './dev/mock-credentials-provider';
 
 // Error types
 export { WaldeError } from './domain/errors/walde-error';
