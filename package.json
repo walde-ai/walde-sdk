@@ -1,6 +1,6 @@
 {
   "name": "@walde.ai/walde-sdk",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "TypeScript SDK for Walde",
   "main": "dist/node.js",
   "types": "dist/node.d.ts",
