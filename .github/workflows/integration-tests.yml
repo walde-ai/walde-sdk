@@ -1,0 +1,180 @@
+name: Integration Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  integration-tests:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout walde-sdk (PR branch)
+        uses: actions/checkout@v4
+        with:
+          path: walde-sdk
+
+      - name: Checkout writer-integ (main)
+        uses: actions/checkout@v4
+        with:
+          repository: accelerates-it/writer-integ
+          ref: main
+          path: writer-integ
+          token: ${{ secrets.CROSS_REPO_ACCELERATES_TOKEN }}
+
+      - name: Checkout writer-api (main)
+        uses: actions/checkout@v4
+        with:
+          repository: accelerates-it/writer-api
+          ref: main
+          path: writer-api
+          token: ${{ secrets.CROSS_REPO_ACCELERATES_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+          cache-dependency-path: |
+            walde-sdk/package-lock.json
+            writer-integ/package-lock.json
+            writer-api/package-lock.json
+
+      - name: Install dependencies - walde-sdk
+        working-directory: ./walde-sdk
+        run: npm ci
+
+      - name: Install dependencies - writer-api
+        working-directory: ./writer-api
+        run: npm ci
+
+      - name: Install dependencies - writer-integ
+        working-directory: ./writer-integ
+        run: npm ci
+
+      - name: Build walde-sdk
+        working-directory: ./walde-sdk
+        run: npm run build
+
+      - name: Run integration tests
+        working-directory: ./writer-integ
+        env:
+          WRITER_API_PATH: ${{ github.workspace }}/writer-api
+          WRITER_SDK_PATH: ${{ github.workspace }}/walde-sdk/dist/node.js
+          MOCK_STATE_ROOT_PATH: /tmp/writer-api-mock-state-ci
+        run: |
+          npm run test:local -- --no-colors 2>&1 | tee test-output.log
+          echo "TEST_EXIT_CODE=${PIPESTATUS[0]}" >> $GITHUB_ENV
+
+      - name: Check test results
+        working-directory: ./writer-integ
+        run: exit ${{ env.TEST_EXIT_CODE || 0 }}
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: |
+            writer-integ/test-output.log
+          retention-days: 30
+
+      - name: Comment PR - Success
+        if: success() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            let testOutput = 'Test output not available';
+            try {
+              testOutput = fs.readFileSync('writer-integ/test-output.log', 'utf8');
+              // Strip ANSI color codes (Jest may still output them despite --no-colors)
+              testOutput = testOutput.replace(/\x1b\[[0-9;]*m/g, '');
+              // Limit output size to avoid GitHub API limits (65536 bytes)
+              if (testOutput.length > 60000) {
+                testOutput = testOutput.substring(0, 60000) + '\n\n... (output truncated)';
+              }
+            } catch (error) {
+              testOutput = 'Could not read test output file';
+            }
+
+            const comment = `## ✅ Integration Tests Passed
+
+            Completed workflow [${context.workflow} (run #${context.runNumber})](${context.payload.repository.html_url}/actions/runs/${context.runId}) successfully.
+
+            <details>
+            <summary>Test output</summary>
+
+            \`\`\`
+            ${testOutput}
+            \`\`\`
+            </details>`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Comment PR - Failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            let testOutput = 'Test output not available';
+            try {
+              testOutput = fs.readFileSync('writer-integ/test-output.log', 'utf8');
+              // Strip ANSI color codes (Jest may still output them despite --no-colors)
+              testOutput = testOutput.replace(/\x1b\[[0-9;]*m/g, '');
+              // Limit output size to avoid GitHub API limits (65536 bytes)
+              if (testOutput.length > 60000) {
+                testOutput = testOutput.substring(0, 60000) + '\n\n... (output truncated)';
+              }
+            } catch (error) {
+              testOutput = 'Could not read test output file';
+            }
+
+            const comment = `## ❌ Integration Tests Failed
+
+            Completed workflow [${context.workflow} (run #${context.runNumber})](${context.payload.repository.html_url}/actions/runs/${context.runId}) with failures.
+
+            Integration tests did not pass. These tests validate the end-to-end functionality and must pass before merging.
+            As the tests describe the desired user experience, we need to fix the code so that it delivers the expected results, and make the tests pass. Please review the output below to identify and address the issues.
+
+
+            <details>
+            <summary>Test output</summary>
+
+            \`\`\`
+            ${testOutput}
+            \`\`\`
+            </details>`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Cleanup processes
+        if: always()
+        run: |
+          # Kill any remaining node processes from the test server
+          pkill -f "npm run serve" || true
+          pkill -f "tsx src/dev/local-server" || true
+          # Clean up mock state directory
+          rm -rf /tmp/writer-api-mock-state-ci || true
