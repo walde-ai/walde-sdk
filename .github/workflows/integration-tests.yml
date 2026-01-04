@@ -39,6 +39,14 @@ jobs:
           path: writer-api
           token: ${{ secrets.CROSS_REPO_ACCELERATES_TOKEN }}
 
+      - name: Checkout writer-cli (main)
+        uses: actions/checkout@v4
+        with:
+          repository: accelerates-it/writer-cli
+          ref: main
+          path: writer-cli
+          token: ${{ secrets.CROSS_REPO_ACCELERATES_TOKEN }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -48,6 +56,7 @@ jobs:
             walde-sdk/package-lock.json
             writer-integ/package-lock.json
             writer-api/package-lock.json
+            writer-cli/package-lock.json
 
       - name: Install dependencies - walde-sdk
         working-directory: ./walde-sdk
@@ -55,6 +64,10 @@ jobs:
 
       - name: Install dependencies - writer-api
         working-directory: ./writer-api
+        run: npm ci
+
+      - name: Install dependencies - writer-cli
+        working-directory: ./writer-cli
         run: npm ci
 
       - name: Install dependencies - writer-integ
@@ -65,11 +78,16 @@ jobs:
         working-directory: ./walde-sdk
         run: npm run build
 
+      - name: Build writer-cli (dev)
+        working-directory: ./writer-cli
+        run: npm run build:dev
+
       - name: Run integration tests
         working-directory: ./writer-integ
         env:
           WRITER_API_PATH: ${{ github.workspace }}/writer-api
           WRITER_SDK_PATH: ${{ github.workspace }}/walde-sdk/dist/node.js
+          WRITER_CLI_EXEC_PATH: ${{ github.workspace }}/writer-cli/dist-dev/cli.cjs
           MOCK_STATE_ROOT_PATH: /tmp/writer-api-mock-state-ci
         run: |
           npm run test:local -- --no-colors 2>&1 | tee test-output.log
